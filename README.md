@@ -1,5 +1,24 @@
 # React + Vite
 
+## Despliegue en AWS Amplify Hosting
+
+1. Desde la consola de Amplify Hosting, conecta el repositorio Git y selecciona la rama **master**. [amplify.yml](amplify.yml) define Node.js 24, la compilación de producción y la publicación desde **dist**.
+2. En **Hosting → Environment variables**, configura para **master** las seis variables de URL con los valores de [.env.example](.env.example). Puedes definir **VITE_TENANTS** para personalizar la lista de tenants del registro público. Vite incorpora estas variables al código público del frontend.
+3. En **Hosting → Rewrites and redirects → Manage redirects**, agrega esta regla en el editor JSON antes de cualquier regla genérica de 404. La respuesta 200 permite recargar rutas de React Router y conserva las solicitudes de archivos estáticos.
+
+~~~json
+[
+  {
+    "source": "</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json|webp|html)$)([^.]+$)/>",
+    "status": "200",
+    "target": "/index.html",
+    "condition": null
+  }
+]
+~~~
+
+4. Inicia el despliegue desde la consola. Si el asistente ya inició una compilación antes de guardar las variables, vuelve a desplegar **master** para incorporarlas.
+
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:
