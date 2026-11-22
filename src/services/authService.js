@@ -1,11 +1,11 @@
-import { authApi } from "./apiClient";
+import { ApiError, authApi } from "./apiClient.js";
 
 export async function login(email, password) {
   const { data } = await authApi.post("/auth/login", {
     email: String(email).trim().toLowerCase(),
     password,
   });
-  if (!data?.token) throw new Error("Respuesta de login inválida");
+  if (!data?.token) throw new ApiError("El servicio devolvió una respuesta de inicio de sesión inválida.");
   return data; // { token, expiresIn, user }
 }
 

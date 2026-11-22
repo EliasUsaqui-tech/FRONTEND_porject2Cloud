@@ -5,11 +5,13 @@ import Layout from "@/components/Layout";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
+import Employees from "@/pages/Employees";
+import Recruitment from "@/pages/Recruitment";
+import Performance from "@/pages/Performance";
+import Attendance from "@/pages/Attendance";
+import Payroll from "@/pages/Payroll";
+import { CORE_READ_ROLES, RECRUITMENT_ROLES } from "@/lib/roles";
 import { Toaster } from "@/components/ui/sonner";
-
-const Pending = ({ name }) => (
-  <div className="text-muted-foreground">Módulo {name} (en implementación)</div>
-);
 
 export default function App() {
   return (
@@ -20,11 +22,11 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/employees" element={<Pending name="Empleados" />} />
-            <Route path="/recruitment" element={<Pending name="Reclutamiento" />} />
-            <Route path="/performance" element={<Pending name="Desempeño" />} />
-            <Route path="/attendance" element={<Pending name="Asistencia" />} />
-            <Route path="/payroll" element={<Pending name="Nómina" />} />
+            <Route path="/employees" element={<ProtectedRoute roles={CORE_READ_ROLES}><Employees /></ProtectedRoute>} />
+            <Route path="/recruitment" element={<ProtectedRoute roles={RECRUITMENT_ROLES}><Recruitment /></ProtectedRoute>} />
+            <Route path="/performance" element={<Performance />} />
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/payroll" element={<Payroll />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

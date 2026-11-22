@@ -4,21 +4,22 @@ import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { CORE_READ_ROLES, RECRUITMENT_ROLES, hasAnyRole } from "@/lib/roles";
 import { 
   Building2, LayoutDashboard, Users, Briefcase, Gauge, Clock, Wallet, LogOut, Sun, Moon 
 } from "lucide-react";
 
 const nav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/employees", label: "Empleados", icon: Users },
-  { to: "/recruitment", label: "Reclutamiento", icon: Briefcase },
+  { to: "/employees", label: "Empleados", icon: Users, roles: CORE_READ_ROLES },
+  { to: "/recruitment", label: "Reclutamiento", icon: Briefcase, roles: RECRUITMENT_ROLES },
   { to: "/performance", label: "Desempeño", icon: Gauge },
   { to: "/attendance", label: "Asistencia", icon: Clock },
   { to: "/payroll", label: "Nómina", icon: Wallet },
 ];
 
 export default function Layout() {
-  const { user, logout } = useAuth();
+  const { user, token, logout } = useAuth();
   const navigate = useNavigate();
   
   // Estado para saber si está en modo oscuro
@@ -47,7 +48,7 @@ export default function Layout() {
         </div>
         
         <nav className="flex-1 p-3 space-y-1">
-          {nav.map(({ to, label, icon: Icon }) => (
+          {nav.filter(({ roles }) => hasAnyRole(user, roles)).map(({ to, label, icon: Icon }) => (
             <NavLink key={to} to={to}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
@@ -77,7 +78,7 @@ export default function Layout() {
       </aside>
 
       {/* Área Principal */}
-      <main className="flex-1 bg-muted/30 dark:bg-slate-950 p-8 relative transition-colors duration-300">
+      <main className="min-w-0 flex-1 bg-muted/30 dark:bg-slate-950 p-8 relative transition-colors duration-300">
         
         {/* Botón flotante para cambiar el tema (Ahora en el Dashboard) */}
         <button
@@ -94,7 +95,7 @@ export default function Layout() {
         </button>
 
         {/* Aquí se renderizan las páginas (Dashboard, Employees, etc.) */}
-        <Outlet />
+        <Outlet key={token} />
         
       </main>
     </div>

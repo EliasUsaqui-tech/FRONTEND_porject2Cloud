@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AuthContext } from "@/context/auth-context";
 import * as authService from "@/services/authService";
+import { ApiError } from "@/services/apiClient";
 import {
   STORAGE_KEY,
   SESSION_EXPIRED_EVENT,
   buildSession,
   clearSession,
+  getStoredToken,
   readSession,
   saveSession,
 } from "@/lib/session";
@@ -25,7 +27,10 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!session) return undefined;
     const ms = Math.max(session.expiresAt - Date.now(), 0);
-    const timer = setTimeout(() => logout("Tu sesión expiró. Inicia sesión nuevamente."), ms);
+    const timer = setTimeout(() => {
+      if (getStoredToken() === session.token) logout("Tu sesión expiró. Inicia sesión nuevamente.");
+      else setSession(readSession());
+    }, ms);
     return () => clearTimeout(timer);
   }, [session, logout]);
 
@@ -33,7 +38,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const onExpired = (e) => logout(e.detail?.message || "Tu sesión expiró. Inicia sesión nuevamente.");
     const onStorage = (e) => {
-      if (e.key === STORAGE_KEY && !e.newValue) setSession(null);
+      if (e.key === STORAGE_KEY || e.key === null) setSession(readSession());
     };
     window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
     window.addEventListener("storage", onStorage);
@@ -45,7 +50,12 @@ export function AuthProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     const data = await authService.login(email, password);
-    const next = buildSession(data.token, data.user);
+    let next;
+    try {
+      next = buildSession(data.token, data.user);
+    } catch {
+      throw new ApiError("El servicio devolvió un token inválido o vencido.");
+    }
     saveSession(data.token);
     setSession(next);
     setSessionMessage(null);

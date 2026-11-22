@@ -5,7 +5,7 @@ export const SESSION_EXPIRED_EVENT = "hcm:session-expired";
 
 export function buildSession(token, apiUser) {
   const claims = jwtDecode(token);
-  if (!claims.exp || !claims.tenantId || !claims.role) {
+  if (!Number.isFinite(claims.exp) || claims.exp * 1000 <= Date.now() || !claims.tenantId || !claims.role) {
     throw new Error("El token recibido no es válido");
   }
   return {
@@ -25,21 +25,22 @@ export function saveSession(token) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({ token }));
 }
 
+export function getStoredToken() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY))?.token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function clearSession() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
 export function readSession() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const { token } = JSON.parse(raw);
-    const session = buildSession(token);
-    if (session.expiresAt <= Date.now()) {
-      clearSession();
-      return null;
-    }
-    return session;
+    const token = getStoredToken();
+    return token ? buildSession(token) : null;
   } catch {
     clearSession();
     return null;

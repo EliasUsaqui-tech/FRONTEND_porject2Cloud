@@ -12,12 +12,13 @@ export default function Login() {
   const { user, login, sessionMessage } = useAuth();
   const nav = useNavigate();
   const location = useLocation();
-  const from = location.state?.from?.pathname || "/dashboard";
+  const original = location.state?.from;
+  const from = original ? { pathname: original.pathname, search: original.search, hash: original.hash } : "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
 
   if (user) return <Navigate to={from} replace />;
 
