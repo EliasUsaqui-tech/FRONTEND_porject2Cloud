@@ -1,81 +1,83 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { jwtDecode } from "jwt-decode";
-
-const STORAGE_KEY = "hcm_auth";
-const AuthContext = createContext(null);
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AuthContext } from "@/context/auth-context";
+import * as authService from "@/services/authService";
+import { ApiError } from "@/services/apiClient";
+import {
+  STORAGE_KEY,
+  SESSION_EXPIRED_EVENT,
+  buildSession,
+  clearSession,
+  getStoredToken,
+  readSession,
+  saveSession,
+} from "@/lib/session";
+import { hasAnyRole } from "@/lib/roles";
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState(() => readSession());
+  const [sessionMessage, setSessionMessage] = useState(null);
 
-  useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      try {
-        const { token: t, user: u } = JSON.parse(raw);
-        const decoded = jwtDecode(t);
-        if (decoded.exp * 1000 > Date.now()) {
-          setToken(t);
-          setUser(u);
-        } else {
-          localStorage.removeItem(STORAGE_KEY);
-        }
-      } catch {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    }
-    setLoading(false);
+  const logout = useCallback((message = null) => {
+    clearSession();
+    setSession(null);
+    setSessionMessage(typeof message === "string" ? message : null);
   }, []);
 
-  const persist = (t, u) => {
-    setToken(t);
-    setUser(u);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ token: t, user: u }));
-  };
+  // Cierre automático al llegar el "exp" del JWT
+  useEffect(() => {
+    if (!session) return undefined;
+    const ms = Math.max(session.expiresAt - Date.now(), 0);
+    const timer = setTimeout(() => {
+      if (getStoredToken() === session.token) logout("Tu sesión expiró. Inicia sesión nuevamente.");
+      else setSession(readSession());
+    }, ms);
+    return () => clearTimeout(timer);
+  }, [session, logout]);
 
-  const login = async (email, password) => {
-    const res = await fetch(`${import.meta.env.VITE_AUTH_API_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || "Credenciales inválidas");
-    
-    const d = jwtDecode(data.token);
-    persist(data.token, {
-      userId: d.sub,
-      email: d.email,
-      tenantId: d.tenantId,
-      role: d.role,
-      employeeId: d.employeeId,
-    });
-    return data;
-  };
+  // Sesión invalidada por el authorizer (401) y cierre de sesión en otras pestañas
+  useEffect(() => {
+    const onExpired = (e) => logout(e.detail?.message || "Tu sesión expiró. Inicia sesión nuevamente.");
+    const onStorage = (e) => {
+      if (e.key === STORAGE_KEY || e.key === null) setSession(readSession());
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [logout]);
 
-  const register = async (email, password, tenantId) => {
-    const res = await fetch(`${import.meta.env.VITE_AUTH_API_URL}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, tenantId }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || "Error al registrar");
-    return data;
-  };
+  const login = useCallback(async (email, password) => {
+    const data = await authService.login(email, password);
+    let next;
+    try {
+      next = buildSession(data.token, data.user);
+    } catch {
+      throw new ApiError("El servicio devolvió un token inválido o vencido.");
+    }
+    saveSession(data.token);
+    setSession(next);
+    setSessionMessage(null);
+    return next.user;
+  }, []);
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
-  };
+  const register = useCallback((payload) => authService.register(payload), []);
 
-  return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      user: session?.user ?? null,
+      token: session?.token ?? null,
+      expiresAt: session?.expiresAt ?? null,
+      isAuthenticated: !!session,
+      sessionMessage,
+      login,
+      register,
+      logout,
+      hasRole: (...roles) => hasAnyRole(session?.user, roles),
+    }),
+    [session, sessionMessage, login, register, logout]
   );
-}
 
-export const useAuth = () => useContext(AuthContext);
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}

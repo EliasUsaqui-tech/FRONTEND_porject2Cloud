@@ -1,15 +1,17 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { AuthProvider } from "@/context/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Layout from "@/components/Layout";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
-
-function Protected({ children }) {
-  const { user, loading } = useAuth();
-  if (loading) return <div className="p-8 text-muted-foreground flex items-center justify-center h-screen">Cargando sesión…</div>;
-  return user ? children : <Navigate to="/login" />;
-}
+import Employees from "@/pages/Employees";
+import Recruitment from "@/pages/Recruitment";
+import Performance from "@/pages/Performance";
+import Attendance from "@/pages/Attendance";
+import Payroll from "@/pages/Payroll";
+import { CORE_READ_ROLES, RECRUITMENT_ROLES } from "@/lib/roles";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function App() {
   return (
@@ -18,17 +20,18 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route element={<Protected><Layout /></Protected>}>
+          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/employees" element={<div className="text-muted-foreground">Módulo Empleados (Próximamente)</div>} />
-            <Route path="/recruitment" element={<div className="text-muted-foreground">Módulo Reclutamiento (Próximamente)</div>} />
-            <Route path="/performance" element={<div className="text-muted-foreground">Módulo Desempeño (Próximamente)</div>} />
-            <Route path="/attendance" element={<div className="text-muted-foreground">Módulo Asistencia (Próximamente)</div>} />
-            <Route path="/payroll" element={<div className="text-muted-foreground">Módulo Nómina (Próximamente)</div>} />
+            <Route path="/employees" element={<ProtectedRoute roles={CORE_READ_ROLES}><Employees /></ProtectedRoute>} />
+            <Route path="/recruitment" element={<ProtectedRoute roles={RECRUITMENT_ROLES}><Recruitment /></ProtectedRoute>} />
+            <Route path="/performance" element={<Performance />} />
+            <Route path="/attendance" element={<Attendance />} />
+            <Route path="/payroll" element={<Payroll />} />
           </Route>
-          <Route path="*" element={<Navigate to="/dashboard" />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
+      <Toaster richColors position="top-right" />
     </AuthProvider>
   );
 }

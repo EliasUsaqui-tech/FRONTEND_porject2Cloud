@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { useAuth } from "@/context/AuthContext";
+import { useNavigate, useLocation, Navigate, Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,13 +9,18 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Building2, Loader2, Sun, Moon } from "lucide-react";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { user, login, sessionMessage } = useAuth();
   const nav = useNavigate();
+  const location = useLocation();
+  const original = location.state?.from;
+  const from = original ? { pathname: original.pathname, search: original.search, hash: original.hash } : "/dashboard";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains("dark"));
+
+  if (user) return <Navigate to={from} replace />;
 
   const toggleTheme = () => {
     const newTheme = !isDark;
@@ -33,7 +38,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(email, password);
-      nav("/dashboard");
+      nav(from, { replace: true });
     } catch (err) {
       setError(err.message || "Error al iniciar sesión");
     } finally {
@@ -86,6 +91,12 @@ export default function Login() {
           </CardHeader>
           <CardContent>
             <form onSubmit={submit} className="space-y-4">
+              {!error && sessionMessage && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{sessionMessage}</AlertDescription>
+                </Alert>
+              )}
               {error && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
