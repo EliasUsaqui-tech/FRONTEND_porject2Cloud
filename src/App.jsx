@@ -1,15 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { AuthProvider } from "@/context/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Layout from "@/components/Layout";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
+import { Toaster } from "@/components/ui/sonner";
 
-function Protected({ children }) {
-  const { user, loading } = useAuth();
-  if (loading) return <div className="p-8 text-muted-foreground flex items-center justify-center h-screen">Cargando sesión…</div>;
-  return user ? children : <Navigate to="/login" />;
-}
+const Pending = ({ name }) => (
+  <div className="text-muted-foreground">Módulo {name} (en implementación)</div>
+);
 
 export default function App() {
   return (
@@ -18,17 +18,18 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route element={<Protected><Layout /></Protected>}>
+          <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/employees" element={<div className="text-muted-foreground">Módulo Empleados (Próximamente)</div>} />
-            <Route path="/recruitment" element={<div className="text-muted-foreground">Módulo Reclutamiento (Próximamente)</div>} />
-            <Route path="/performance" element={<div className="text-muted-foreground">Módulo Desempeño (Próximamente)</div>} />
-            <Route path="/attendance" element={<div className="text-muted-foreground">Módulo Asistencia (Próximamente)</div>} />
-            <Route path="/payroll" element={<div className="text-muted-foreground">Módulo Nómina (Próximamente)</div>} />
+            <Route path="/employees" element={<Pending name="Empleados" />} />
+            <Route path="/recruitment" element={<Pending name="Reclutamiento" />} />
+            <Route path="/performance" element={<Pending name="Desempeño" />} />
+            <Route path="/attendance" element={<Pending name="Asistencia" />} />
+            <Route path="/payroll" element={<Pending name="Nómina" />} />
           </Route>
-          <Route path="*" element={<Navigate to="/dashboard" />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
+      <Toaster richColors position="top-right" />
     </AuthProvider>
   );
 }
